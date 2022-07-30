@@ -1,0 +1,1 @@
+scryer-prolog tests/test_structure.pl
