@@ -1,7 +1,6 @@
 # Soir 🌆
 
-A Prolog based WebAssembly runtime and library. It is ISO compliant, and tested
-against Scryer Prolog.
+An ISO Prolog based WebAssembly runtime and library.
 
 The library which the runtime executes based on is made to match as closely as
 possible to the
@@ -12,6 +11,12 @@ future, the
 will also be added as an option, before eventually being made the default once
 it becomes a recommendation.
 
-This runtime is still in its early stages, and feedback is very welcome. It is my hope to be able
-to take advantage of prolog's natural affinity for tree parsing to produce correct, fast execution
-of wasm modules.
+This runtime is still in its early stages, and feedback is very welcome. It is
+my hope to be able to take advantage of prolog's natural affinity for tree
+parsing to produce correct, fast execution of wasm modules. The design is still
+open to being changed at any point, so please avoid using this in any critical
+applications. If you have thoughts on the design, open an issue so we can
+discuss them.
+
+In terms of Prolog implementations, this is tested against Scryer but should function
+with any ISO compliant implementation.
