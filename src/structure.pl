@@ -90,16 +90,13 @@ iunop(popcnt).
 ibinop(add).
 ibinop(sub).
 ibinop(mul).
-ibinop(div_u).
-ibinop(div_s).
-ibinop(rem_u).
-ibinop(rem_s).
+ibinop(div_sx(sx(_))).
+ibinop(rem_sx(sx(_))).
 ibinop(and).
 ibinop(or).
 ibinop(xor).
 ibinop(shl).
-ibinop(shr_u).
-ibinop(shr_s).
+ibinop(shr_sx(sx(_))).
 ibinop(rotl).
 ibinop(rotr).
 funop(abs).
@@ -119,12 +116,10 @@ fbinop(copysign).
 itestop(eqz).
 irelop(eq).
 irelop(ne).
-irelop(lt_u).
-irelop(lt_s).
-irelop(le_u).
-irelop(le_s).
-irelop(ge_u).
-irelop(ge_s).
+irelop(lt_sx(sx(_))).
+irelop(gt_sx(sx(_))),
+irelop(le_sx(sx(_))).
+irelop(ge_sx(sx(_))).
 frelop(eq).
 frelop(ne).
 frelop(lt).
@@ -147,11 +142,23 @@ cvtop(demote).
 cvtop(promote).
 cvtop(reinterpret).
 
-instr(drop(_)).
-instr(select(_)).
+instr(drop).
+instr(select).
 
 instr(local_get(localidx(_))).
 instr(local_set(localidx(_))).
 instr(local_tee(localidx(_))).
 instr(global_get(globalidx(_))).
 instr(global_set(globalidx(_))).
+
+memarg(offset(u(32, _)), align(u(32, _))).
+instr(inn_load(n(_), memarg(_))).
+instr(fnn_load(n(_), memarg(_))).
+instr(inn_load8_sx(nn(_), sx(_), memarg(_))).
+instr(inn_load16_sx(nn(_), sx(_), memarg(_))).
+instr(inn_load64_sx(nn(32), sx(_), memarg(_))).
+instr(inn_store8_sx(nn(_), sx(_), memarg(_))).
+instr(inn_store16_sx(nn(_), sx(_), memarg(_))).
+instr(inn_store64_sx(nn(32), sx(_), memarg(_))).
+instr(memory_size).
+instr(memory_grow).
