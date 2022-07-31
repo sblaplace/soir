@@ -29,7 +29,10 @@ name(Name) :-
 
 % Types
 
-valtype(N) :- i(32, N) ; i(64, N) ; f(32, N) ; f(64, N).
+valtype(i(32, N)).
+valtype(i(64, N)).
+valtype(i(32, N)).
+valtype(i(64, N)).
 
 resulttype([]).
 resulttype([valtype(_) | resulttype]).
@@ -44,8 +47,21 @@ tabletype(limits, elemtype).
 elemtype(funcref(_, _)).
 
 globaltype(mut(_), valtype(_)).
-mut(Mut) :- Mut = const ; Mut = var.
+mut(const).
+mut(var).
 
-externtype(M, T) :- 
+externtype(func(functype(_))).
+externtype(table(tabletype(_))).
+externtype(mem(memtype(_))).
+externtype(global(globaltype(_))).
+
+% TODO: 2.3.8.1 Conventions
+% Filter out specific externtypes in list
 
 % Instructions
+
+nn(32).
+nn(64).
+sx(u).
+sx(s).
+instr()
