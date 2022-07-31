@@ -177,3 +177,53 @@ instr(call_indirect, funcidx(_)).
 
 expr(Instrs) :- maplist(instr, Instrs).
 
+module(
+    types(vec(functype(_))), 
+    funcs(vec(func(_))),
+    tables(vec(table(_))),
+    mems(vec(mem(_))),
+    globals(vec(global(_))),
+    elem(vec(elem(_))),
+    data(vec(data(_))),
+    start(start(_)),
+    imports(vec(import(_))),
+    exports(vec(export(_)))
+)
+
+typeidx(u(32, _)).
+funcidx(u(32, _)).
+tableidx(u(32, _)).
+memidx(u(32, _)).
+globalidx(u(32, _)).
+localidx(u(32, _)).
+labelidx(u(32, _)).
+
+func(
+    type(typeidx(_)),
+    locals(vec(valtype(_))),
+    body(expr(_))
+).
+
+table(type(tabletype(_, _))).
+
+mem(type(memtype(_))).
+
+global(type(globaltype(_)), init(expr(_))).
+
+elem(table(tableidx(_)), offset(expr(_)), init(vec(funcidx(_)))).
+
+data(data(memidx(_)), offset(expr(_)), init(vec(byte))).
+
+start(func(funcidx(_))).
+
+export(name(name(_)), desc(exportdesc(_))).
+exportdesc(func, funcidx(_)).
+exportdesc(table, tableidx(_)).
+exportdesc(mem, memidx(_)).
+exportdesc(global, globalidx(_)).
+
+import(module(name(_)), name(name(_)), desc(importdesc(_))).
+importdesc(func, typeidx(_)).
+importdesc(table, tabletype(_)).
+importdesc(mem, memtype(_)).
+importdesc(global, globaltype(_)).
