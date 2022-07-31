@@ -44,7 +44,7 @@ limits(min(MinN), max(MaxN)) :- u(32, MinN), u(32, MaxN).
 
 memtype(limits(_Min, _Max)).
 
-tabletype(limits, elemtype).
+tabletype(limits(_, _), elemtype(_)).
 elemtype(funcref(_, _)).
 
 globaltype(mut(_), valtype(_)).
@@ -145,11 +145,11 @@ cvtop(reinterpret).
 instr(drop).
 instr(select).
 
-instr(local_get(localidx(_))).
-instr(local_set(localidx(_))).
-instr(local_tee(localidx(_))).
-instr(global_get(globalidx(_))).
-instr(global_set(globalidx(_))).
+instr(local_get, localidx(_)).
+instr(local_set, localidx(_)).
+instr(local_tee, localidx(_)).
+instr(global_get, globalidx(_)).
+instr(global_set, globalidx(_)).
 
 memarg(offset(u(32, _)), align(u(32, _))).
 instr(inn_load(n(_), memarg(_))).
@@ -162,3 +162,18 @@ instr(inn_store16_sx(nn(_), sx(_), memarg(_))).
 instr(inn_store64_sx(nn(32), sx(_), memarg(_))).
 instr(memory_size).
 instr(memory_grow).
+
+instr(nop).
+instr(unreachable).
+instr(block, resulttype(_), Instrs) :- maplist(instr, Instrs).
+instr(loop, resulttype(_), Instrs) :- maplist(instr, Instrs).
+instr(if, resulttype(_), Instrs, ElseInstrs) :- maplist(instr, Instrs), maplist(instr, ElseInstrs).
+instr(br, labelidx(_)).
+instr(br_if, labelidx(_)).
+instr(br_table, vec(labelidx(_)), labelidx(_)).
+instr(return).
+instr(call, funcidx(_)).
+instr(call_indirect, funcidx(_)).
+
+expr(Instrs) :- maplist(instr, Instrs).
+
