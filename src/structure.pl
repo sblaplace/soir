@@ -2,7 +2,6 @@
 :- use_module(library(lists)).
 :- use_module(library(charsio)).
 :- use_module(library(clpz)).
-:- use_module(library(dcgs)).
 
 vec(A) :- length(A, L), L #< 2^32.
 
