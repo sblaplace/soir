@@ -22,7 +22,7 @@ signif(64, 52).
 expon(32, 8).
 expon(64, 11).
 
-name(Name) :- 
+name(Name) :-
     length(Name, L), 
     L < 2^32, 
     maplist(\C^(\+ char_type(C, meta), \+ char_type(C, layout)), Name).
@@ -37,13 +37,14 @@ valtype(i(64, _N)).
 resulttype([]).
 resulttype([valtype(_) | resulttype]).
 
+functype(vec(valtype(_)), []).
 functype(vec(valtype(_)), [valtype(_)]).
 
-limits(min(MinN), max(MaxN)) :- u(32, MinN), u(32, MaxN).
+limits(min(u(32, Min)), max(u(32, Max))) :- Max #>= Min.
 
-memtype(limits(_Min, _Max)).
+memtype(limits(_Min, Max)) :- 2^16 #>= Max. 
 
-tabletype(limits(_, _), elemtype(_)).
+tabletype(limits(_, Max), elemtype(_)) :- 2^32 #>= Max.
 elemtype(funcref(_, _)).
 
 globaltype(mut(_), valtype(_)).
