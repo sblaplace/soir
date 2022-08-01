@@ -17,3 +17,6 @@ discuss them.
 In terms of Prolog implementations, this is tested against Scryer but should
 function with any ISO compliant implementation that ships with the relevant
 libraries.
+
+WASI support is currently in development (at the moment of writing, this means
+non-existent, but coming next).
