@@ -2,6 +2,9 @@
 :- use_module(library(lists)).
 :- use_module(library(charsio)).
 :- use_module(library(clpz)).
+:- use_module(library(dcgs)).
+
+% TODO: Convert to use dcgs and atom_chars/2
 
 vec(A) :- length(A, L), L #< 2^32.
 
@@ -29,16 +32,24 @@ name(Name) :-
 
 % Types
 
-valtype(i(32, _N)).
-valtype(i(64, _N)).
-valtype(i(32, _N)).
-valtype(i(64, _N)).
+numtype(i(32, _N)).
+numtype(i(64, _N)).
+numtype(i(32, _N)).
+numtype(i(64, _N)).
+
+vectype(i(128, _N)).
+
+reftype(funcref).
+reftype(externref).
+
+valtype(numtype(_)).
+valtype(vectype(_)).
+valtype(reftype(_)).
 
 resulttype([]).
 resulttype([valtype(_) | resulttype]).
 
-functype(vec(valtype(_)), []).
-functype(vec(valtype(_)), [valtype(_)]).
+functype(resulttype(_), resulttype(_)).
 
 limits(min(u(32, Min)), max(u(32, Max))) :- Max #>= Min.
 
@@ -61,31 +72,28 @@ externtype(global(globaltype(_))).
 
 % Instructions
 
-nn(32).
-nn(64).
-mm(32).
-mm(64).
+nn('32').
+nn('64').
+mm('32').
+mm('64').
 sx(u).
 sx(s).
-instr(drop).
-instr(select).
-instr(memory_size).
-instr(memory_grow).
+instr(I) :- phrase(instr_, L), reverse(L, LR), foldl(atom_concat, LR, '', I).
+% Memory Instructions /1
+instr('memory.size').
+instr('memory.grow').
+instr('memory.fill').
+instr('memory.copy').
+% Control Instructions /1
 instr(nop).
 instr(unreachable).
-instr(i32_wrap_i64).
-instr(f32_demote_f64).
-instr(f64_promote_f32).
+instr(drop).
+instr(select).
 instr(return).
-instr(i64_extend_i32_sx(sx(_))).
-instr(inn_load(n(_), memarg(_))).
-instr(fnn_load(n(_), memarg(_))).
-instr(inn_load8_sx(nn(_), sx(_), memarg(_))).
-instr(inn_load16_sx(nn(_), sx(_), memarg(_))).
-instr(inn_load64_sx(nn(32), sx(_), memarg(_))).
-instr(inn_store8_sx(nn(_), sx(_), memarg(_))).
-instr(inn_store16_sx(nn(_), sx(_), memarg(_))).
-instr(inn_store64_sx(nn(32), sx(_), memarg(_))).
+instr('i32.wrap_i64').
+instr('f32.demote_f64').
+instr('f64.promote_f32').
+instr(I) :- sx(SX), atom_concat('i64.extend_i32_', SX, I).
 instr(inn_trunc_fmm_sx(nn(_), mm(_), sx(_))).
 instr(fnn_convert_imm_sx(nn(_), mm(_), sx(_))).
 instr(inn_reinterpret_fnn(nn(_))).
@@ -99,78 +107,110 @@ instr(fnn_fbinop(nn(_), fbinop(_))).
 instr(inn_itestop(nn(_), itestop(_))).
 instr(inn_irelop(nn(_), irelop(_))).
 instr(fnn_frelop(nn(_), frelop(_))).
-instr(local_get, localidx(_)).
-instr(local_set, localidx(_)).
-instr(local_tee, localidx(_)).
-instr(global_get, globalidx(_)).
-instr(global_set, globalidx(_)).
+instr(inn_extendN_s(nn(_), 8)).
+instr(inn_extendN_s(nn(_), 16)).
+instr(inn_extendN_s(nn(_), 32)).
+instr(v128_vvunop).
+instr(v128_vvbinop).
+instr(v128_vvternop).
+instr(v128_vvtestop).
+instr(i8x16_swizzle).
+instr(shape_splat(shape(_))).
+% Numeric Instructions /2
+instr('i32.const', i(nn(32), _)).
+instr('i64.const', i(nn(64), _)).
+instr('f32.const', i(nn(32), _)).
+instr('f64.const', i(nn(64), _)).
+% Vector Instructions /2
+% i8x16_extract_lane_sx laneidx
+instr(I, laneidx(_)) :- sx(SX), atom_concat('i8x16_extract_lane_', SX, I).
+% i16x8_extract_lane_sx laneidx
+instr(I, laneidx(_)) :- sx(SX), atom_concat('i16x8_extract_lane_', SX, I).
+instr('i32x4.extract_lane', laneidx(_)).
+instr('i64x2.extract_lane', laneidx(_)).
+instr('i8x16.shuffle', laneidx(_)).
+% Memory Instructions /2
+instr(I, memarg(_)) :- phrase(instr_mem, L), reverse(L, LR), foldl(atom_concat, LR, '', I).
+instr('memory.init', dataidx(_)).
+instr('data.drop', dataidx(_)).
+instr('local.get', localidx(_)).
+instr('local.set', localidx(_)).
+instr('local.tee', localidx(_)).
+instr('global.get', globalidx(_)).
+instr('global.set', globalidx(_)).
 instr(br, labelidx(_)).
 instr(br_if, labelidx(_)).
 instr(call, funcidx(_)).
 instr(call_indirect, funcidx(_)).
+instr(v128_const, i(128, _)).
+% Vector Instructions /3
+instr(instr_mem_lane, memarg(_), laneidx(_)).
 instr(block, resulttype(_), Instrs) :- maplist(instr, Instrs).
 instr(loop, resulttype(_), Instrs) :- maplist(instr, Instrs).
 instr(br_table, vec(labelidx(_)), labelidx(_)).
 instr(if, resulttype(_), Instrs, ElseInstrs) :- maplist(instr, Instrs), maplist(instr, ElseInstrs).
-iunop(clz).
-iunop(ctz).
-iunop(popcnt).
-ibinop(add).
-ibinop(sub).
-ibinop(mul).
-ibinop(div_sx(sx(_))).
-ibinop(rem_sx(sx(_))).
-ibinop(and).
-ibinop(or).
-ibinop(xor).
-ibinop(shl).
-ibinop(shr_sx(sx(_))).
-ibinop(rotl).
-ibinop(rotr).
-funop(abs).
-funop(neg).
-funop(sqrt).
-funop(ceil).
-funop(floor).
-funop(trunc).
-funop(nearest).
-fbinop(add).
-fbinop(sub).
-fbinop(mul).
-fbinop(div).
-fbinop(min).
-fbinop(max).
-fbinop(copysign).
-itestop(eqz).
-irelop(eq).
-irelop(ne).
-irelop(lt_sx(sx(_))).
-irelop(gt_sx(sx(_))).
-irelop(le_sx(sx(_))).
-irelop(ge_sx(sx(_))).
-frelop(eq).
-frelop(ne).
-frelop(lt).
-frelop(gt).
-frelop(le).
-frelop(ge).
+instr_ --> [i], [NN], ['.'], (iunop | ibinop | itestop | irelop).
+instr_ --> [f], [NN], ['.'], (funop | fbinop | frelop).
+instr_ --> cvtop | extendN_s.
+% inn.load
+instr_mem --> ([i] | [f]), [NN], { nn(NN) }, (['.load'] | ['.store']).
+instr_mem --> ['v128'], (['.load'] | ['.store']).
+% inn.load8_sx, inn.load16_sx
+instr_mem --> [i], [NN], { nn(NN) }, ['.load'], (['8_'] | ['16_']), [SX], { sx(SX) }.
+% i64.load32_sx
+instr_mem --> ['i64.load32_'], [SX], { sx(SX) }.
+% inn.store8, inn.store16
+instr_mem --> ['i'], [NN], { nn(NN) }, ['.store'], (['8'] | ['16']).
+instr_mem --> ['i64.store32'].
+% v128.load8x8_sx
+instr_mem --> ['v128.load8x8_'], [SX], { sx(SX) }.
+instr_mem --> ['v128.load16x4_'], [SX], { sx(SX) }.
+instr_mem --> ['v128.load32x2_'], [SX], { sx(SX) }.
+instr_mem --> ['v128.load32_zero'].
+instr_mem --> ['v128.load64_zero'].
+instr_mem --> ['v128.load'], [WW], { ww(WW) }, ['_splat'].
+instr_mem_lane --> ['v128'], (['.store'] | ['.load']), [WW], { ww(WW) }, ['_lane'].
+iunop --> [clz] | [ctz] | [popcnt].
+ibinop --> [add] | [sub] | [mul] | (([div_] | [rem_] | [shr_]), [SX], { sx(SX) })
+    | [and] | [or] | [xor] | [shl] | [rotl] | [rotr].
+funop --> [abs] | [neg] | [sqrt] | [ceil] | [floor] | [trunc] | [nearest].
+fbinop --> [and] | [sub] | [mul] | [div] | [min] | [max] | [copysign].
+itestop --> [eqz].
+irelop --> [eq] | [ne] | (([lt_] | [gt_] | [le_] | [ge_]), [SX], { sx(SX) }).
+frelop --> [eq] | [ne] | [lt] | [gt] | [le] | [ge].
 
-unop(iunop(_)).
-unop(funup(_)).
-binop(ibinop(_)).
-binop(fbinop(_)).
-testop(itestop(_)).
-relop(irelop(_)).
-relop(frelop(_)).
-cvtop(wrap).
-cvtop(extend).
-cvtop(trunc).
-cvtop(convert).
-cvtop(demote).
-cvtop(promote).
-cvtop(reinterpret).
+extendN_s --> [i], [NN], { nn(NN) }, ['.extend'], (['8_s'] | ['16_s']).
+extendN_s --> ['i64.extend32_s']. 
+unop --> iunop | funop | extendN_s.
+binop --> ibinop | fbinop.
+testop --> itestop.
+relop --> irelop | frelop.
+cvtop --> ['i32.wrap_i64'].
+cvtop --> ['i64.extend_i32_'], [SX], { sx(SX) }.
+cvtop --> [i], [NN], { nn(NN) }, ['.trunc_f'], [MM], { mm(MM) }, ['_'], [SX], { sx(SX) }.
+cvtop --> [i], [NN], { nn(NN) }, ['.trunc_sat_f'], [MM], { mm(MM) }, ['_'], [SX], { sx(SX) }.
+cvtop --> ['f32.demote_f64'] | ['f64.promote_f32'].
+cvtop --> [f], [NN], { nn(NN) }, ['.convert_i'], [MM], { mm(MM) }, [SX], { sx(SX) }.
+cvtop --> [i], [NN], { nn(NN) }, ['.reinterpret_f'], [NN], { nn(NN) }.
+cvtop --> [f], [NN], { nn(NN) }, ['.reinterpret_i'], [NN], { nn(NN) }.
+
+ishape(i8x16).
+ishape(i16x8).
+ishape(i32x4).
+ishape(i64x2).
+fshape(f32x4).
+fshape(f64x2).
+shape(ishape(_)).
+shape(fshape(_)).
+half(low).
+half(high).
+laneidx(u(8, _)).
 
 memarg(offset(u(32, _)), align(u(32, _))).
+ww('8').
+ww('16').
+ww('32').
+ww('64').
 
 expr(Instrs) :- maplist(instr, Instrs).
 
