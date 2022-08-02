@@ -224,7 +224,8 @@ vfrelop --> [eq] | [ne] | [lt] | [gt] | [le] | [ge].
 viunop --> [abs] | [neg].
 vibinop --> [add] | [sub].
 viminmaxop --> ([min_] | [max_]), sx.
-visatbinop --> [shl] | ([shr_], sx).
+visatbinop --> ([add_sat_] | [sub_sat_]), sx.
+vishiftop --> [shl] | ([shr_], sx).
 vfunop --> [abs] | [neg] | [sqrt] | [ceil] | [floor] | [trunc] | [nearest].
 vfbinop --> [add] | [sub] | [mul] | [div] | [min] | [max] | [pmin] | [pmax].
 
