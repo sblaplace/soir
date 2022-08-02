@@ -70,12 +70,14 @@ externtype(global(globaltype(_))).
 % TODO: 2.3.8.1 Conventions
 % Filter out specific externtypes in list
 
+atoms_concat(DCG, I) :- phrase(DCG, L), reverse(L, LR), foldl(atom_concat, LR, '', I).
+
 % Instructions
 
 nn --> ['32'] | ['64'].
 mm --> ['32'] | ['64'].
 sx --> [u] | [s].
-instr(I) :- phrase(instr_, L), reverse(L, LR), foldl(atom_concat, LR, '', I).
+instr(I) :- atoms_concat(instr_, I).
 % Memory Instructions /1
 instr('memory.size').
 instr('memory.grow').
@@ -84,8 +86,6 @@ instr('memory.copy').
 % Control Instructions /1
 instr(nop).
 instr(unreachable).
-instr(drop).
-instr(select).
 instr(return).
 % Vector Instructions /1
 % Numeric Instructions /2
@@ -95,6 +95,12 @@ instr('f32.const', i(32, _)).
 instr('f64.const', i(64, _)).
 % Vector Instructions /2
 instr('v128.const', i(128, _)).
+% Parametric Instructions /2
+instr(I, 0) :- atoms_concat(instr_valtypes, I).
+instr(I, valtype(_)) :- atoms_concat(instr_valtypes, I).
+% Variable Instructions /2
+instr(I, localidx(_)) :- atoms_concat(instr_localidx, I).
+instr(I, globalidx(_)) :- atoms_concat(instr_globalidx, I).
 % i8x16_extract_lane_sx laneidx
 instr(I, laneidx(_)) :- sx(SX), atom_concat('i8x16_extract_lane_', SX, I).
 % i16x8_extract_lane_sx laneidx
@@ -103,7 +109,7 @@ instr('i32x4.extract_lane', laneidx(_)).
 instr('i64x2.extract_lane', laneidx(_)).
 instr('i8x16.shuffle', laneidx(_)).
 % Memory Instructions /2
-instr(I, memarg(_)) :- phrase(instr_mem, L), reverse(L, LR), foldl(atom_concat, LR, '', I).
+instr(I, memarg(_)) :- phrase(instr_memarg, L), reverse(L, LR), foldl(atom_concat, LR, '', I).
 instr('memory.init', dataidx(_)).
 instr('data.drop', dataidx(_)).
 instr('local.get', localidx(_)).
@@ -117,7 +123,7 @@ instr(call, funcidx(_)).
 instr(call_indirect, funcidx(_)).
 instr(v128_const, i(128, _)).
 % Vector Instructions /3
-instr(instr_mem_lane, memarg(_), laneidx(_)).
+instr(instr_memarg_lane, memarg(_), laneidx(_)).
 instr(block, resulttype(_), Instrs) :- maplist(instr, Instrs).
 instr(loop, resulttype(_), Instrs) :- maplist(instr, Instrs).
 instr(br_table, vec(labelidx(_)), labelidx(_)).
@@ -162,25 +168,30 @@ instr_ --> ['f32x4.convert_i32x4_'], sx.
 instr_ --> ['f32x4.demote_f64x2_zero'].
 instr_ --> ['f64x2.convert_low_i32x4_'], sx.
 instr_ --> ['f64x2.promote_low_f32x4'].
-
-% inn.load
-instr_mem --> ([i] | [f]), nn, (['.load'] | ['.store']).
-instr_mem --> ['v128'], (['.load'] | ['.store']).
-% inn.load8_sx, inn.load16_sx
-instr_mem --> [i], nn, ['.load'], (['8_'] | ['16_']), sx.
-% i64.load32_sx
-instr_mem --> ['i64.load32_'], sx.
-% inn.store8, inn.store16
-instr_mem --> ['i'], nn, ['.store'], (['8'] | ['16']).
-instr_mem --> ['i64.store32'].
-% v128.load8x8_sx
-instr_mem --> ['v128.load8x8_'], sx.
-instr_mem --> ['v128.load16x4_'], sx.
-instr_mem --> ['v128.load32x2_'], sx.
-instr_mem --> ['v128.load32_zero'].
-instr_mem --> ['v128.load64_zero'].
-instr_mem --> ['v128.load'], ww, ['_splat'].
-instr_mem_lane --> ['v128'], (['.store'] | ['.load']), ww, ['_lane'].
+% Reference Instructions DCG Rules (No Args)
+instr_ --> ['ref.is_null'].
+% Parametric Instructions DCG Rules (No Args)
+instr_ --> ['drop'].
+% Parametric Instructions DCG Rules (valtype)
+instr_valtype --> ['select'].
+% Variable Instructions DCG Rules (localidx)
+instr_localidx --> ['local.'], (['get'] | ['set'] | ['tee']).
+% Variable Instructions DCG Rules (globalidx)
+instr_globalidx --> ['global.'], (['get'] | ['set']).
+% Memory Instructions DCG Rules (memarg)
+instr_memarg --> ([i] | [f]), nn, (['.load'] | ['.store']).
+instr_memarg --> ['v128'], (['.load'] | ['.store']).
+instr_memarg --> [i], nn, ['.load'], (['8_'] | ['16_']), sx.
+instr_memarg --> ['i64.load32_'], sx.
+instr_memarg --> ['i'], nn, ['.store'], (['8'] | ['16']).
+instr_memarg --> ['i64.store32'].
+instr_memarg --> ['v128.load8x8_'], sx.
+instr_memarg --> ['v128.load16x4_'], sx.
+instr_memarg --> ['v128.load32x2_'], sx.
+instr_memarg --> ['v128.load32_zero'].
+instr_memarg --> ['v128.load64_zero'].
+instr_memarg --> ['v128.load'], ww, ['_splat'].
+instr_memarg_laneidx --> ['v128'], (['.store'] | ['.load']), ww, ['_lane'].
 iunop --> [clz] | [ctz] | [popcnt].
 ibinop --> [add] | [sub] | [mul] | (([div_] | [rem_] | [shr_]), sx)
     | [and] | [or] | [xor] | [shl] | [rotl] | [rotr].
