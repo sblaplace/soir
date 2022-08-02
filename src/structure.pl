@@ -89,11 +89,12 @@ instr(select).
 instr(return).
 % Vector Instructions /1
 % Numeric Instructions /2
-instr('i32.const', i(nn(32), _)).
-instr('i64.const', i(nn(64), _)).
-instr('f32.const', i(nn(32), _)).
-instr('f64.const', i(nn(64), _)).
+instr('i32.const', i(32, _)).
+instr('i64.const', i(64, _)).
+instr('f32.const', i(32, _)).
+instr('f64.const', i(64, _)).
 % Vector Instructions /2
+instr('v128.const', i(128, _)).
 % i8x16_extract_lane_sx laneidx
 instr(I, laneidx(_)) :- sx(SX), atom_concat('i8x16_extract_lane_', SX, I).
 % i16x8_extract_lane_sx laneidx
@@ -121,9 +122,47 @@ instr(block, resulttype(_), Instrs) :- maplist(instr, Instrs).
 instr(loop, resulttype(_), Instrs) :- maplist(instr, Instrs).
 instr(br_table, vec(labelidx(_)), labelidx(_)).
 instr(if, resulttype(_), Instrs, ElseInstrs) :- maplist(instr, Instrs), maplist(instr, ElseInstrs).
+% Numeric DCG Rules (No Arg Instructions)
 instr_ --> [i], nn, ['.'], (iunop | ibinop | itestop | irelop).
 instr_ --> [f], nn, ['.'], (funop | fbinop | frelop).
 instr_ --> cvtop | extendN_s.
+% Vector DCG Rules (No Arg Instructions)
+instr_ --> ['v128.'], (vvunop | vvbinop | vvternop | vvtestop).
+instr_ --> ['i8x16.swizzle'].
+instr_ --> shape, ['.splat'].
+instr_ --> (['i8x16.'] | ['i16x8'] | ['i32x4']), virelop.
+instr_ --> ['i64x2.'], ([eq] | [ne] | [lt_s] | [gt_s] | [le_s] | [ge_s]).
+instr_ --> fshape, ['.'], vfrelop.
+instr_ --> ishape, ['.'], viunop.
+instr_ --> ['i8x16.popcnt'].
+instr_ --> ['i16x8.q15mulr_sat_s'].
+instr_ --> ['i32x4.dot_i16x8_s'].
+instr_ --> fshape, ['.'], vfunop.
+instr_ --> ishape, ['.'], vitestop.
+instr_ --> ishape, ['.bitmask'].
+instr_ --> ['i8x16.narrow_i16x8_'], sx.
+instr_ --> ['i16x8.narrow_i32x4_'], sx.
+instr_ --> ['i16x8.extend_'], half, ['_i8x16_'], sx.
+instr_ --> ['i32x4.extend_'], half, ['_i16x8_'], sx.
+instr_ --> ['i64x2.extend_'], half, ['_i32x4_'], sx.
+instr_ --> ishape, ['.'], vishiftop.
+instr_ --> ishape, ['.'], vibinop.
+instr_ --> (['i8x16.'] | ['i16x8.'] | ['i32x4.']), viminmaxop.
+instr_ --> (['i8x16.'] | ['i16x8.']), visatbinop.
+instr_ --> (['16x8.'] | ['i32x4.'] | ['i64x2.']), ['mul'].
+instr_ --> (['i8x16.'] | ['i16x8.']), ['avgr_u'].
+instr_ --> ['i16x8.extmul_'], half, ['_i8x16_'], sx. 
+instr_ --> ['i32x4.extmul_'], half, ['_i16x8_'], sx. 
+instr_ --> ['i64x2.extmul_'], half, ['_i32x4_'], sx.
+instr_ --> ['i16x8.extadd_pairwise_i8x16_'], sx.
+instr_ --> ['i32x4.extadd_pairwise_i16x8_'], sx.
+instr_ --> ['i32x4.trunc_sat_f32x4_'], sx.
+instr_ --> ['i32x4.trunc_sat_f64x4_'], sx, ['_zero'].
+instr_ --> ['f32x4.convert_i32x4_'], sx.
+instr_ --> ['f32x4.demote_f64x2_zero'].
+instr_ --> ['f64x2.convert_low_i32x4_'], sx.
+instr_ --> ['f64x2.promote_low_f32x4'].
+
 % inn.load
 instr_mem --> ([i] | [f]), nn, (['.load'] | ['.store']).
 instr_mem --> ['v128'], (['.load'] | ['.store']).
