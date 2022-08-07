@@ -3,8 +3,7 @@
 :- use_module(library(charsio)).
 :- use_module(library(clpz)).
 :- use_module(library(dcgs)).
-
-% TODO: Convert to use dcgs and atom_chars/2
+:- use_module(library(tabling)).
 
 vec(A) :- length(A, L), L #< 2^32.
 
@@ -78,26 +77,18 @@ nn --> ['32'] | ['64'].
 mm --> ['32'] | ['64'].
 sx --> [u] | [s].
 instr(I) :- atoms_concat(instr_, I).
-% Memory Instructions /1
-instr('memory.size').
-instr('memory.grow').
-instr('memory.fill').
-instr('memory.copy').
-% Control Instructions /1
-instr(nop).
-instr(unreachable).
-instr(return).
 % Vector Instructions /1
 % Numeric Instructions /2
-instr('i32.const', i(32, _)).
-instr('i64.const', i(64, _)).
-instr('f32.const', i(32, _)).
-instr('f64.const', i(64, _)).
+instr --> ['i32.const'], N, { i(32, N) }.
+instr --> ['i64.const'], N, { i(64, N) }.
+instr --> ['f32.const'], N, { f(32, N) }.
+instr --> ['f64.const'], N, { f(64, N) }.
+instr --> ['v128.const'], N, { i(128, N) }.
 % Vector Instructions /2
 instr('v128.const', i(128, _)).
 % Parametric Instructions /2
-instr(I, 0) :- atoms_concat(instr_valtypes, I).
-instr(I, valtype(_)) :- atoms_concat(instr_valtypes, I).
+instr(I, 0) :- atoms_concat(instr_valtype, I).
+instr(I, valtype(_)) :- atoms_concat(instr_valtype, I).
 % Variable Instructions /2
 instr(I, localidx(_)) :- atoms_concat(instr_localidx, I).
 instr(I, globalidx(_)) :- atoms_concat(instr_globalidx, I).
@@ -105,18 +96,11 @@ instr(I, globalidx(_)) :- atoms_concat(instr_globalidx, I).
 instr(I, laneidx(_)) :- sx(SX), atom_concat('i8x16_extract_lane_', SX, I).
 % i16x8_extract_lane_sx laneidx
 instr(I, laneidx(_)) :- sx(SX), atom_concat('i16x8_extract_lane_', SX, I).
-instr('i32x4.extract_lane', laneidx(_)).
-instr('i64x2.extract_lane', laneidx(_)).
-instr('i8x16.shuffle', laneidx(_)).
 % Memory Instructions /2
 instr(I, memarg(_)) :- phrase(instr_memarg, L), reverse(L, LR), foldl(atom_concat, LR, '', I).
-instr('memory.init', dataidx(_)).
-instr('data.drop', dataidx(_)).
-instr('local.get', localidx(_)).
-instr('local.set', localidx(_)).
-instr('local.tee', localidx(_)).
-instr('global.get', globalidx(_)).
-instr('global.set', globalidx(_)).
+instr(I, dataidx(_)) :- atoms_concat(instr_dataidx, I).
+instr(I, localidx(_)) :- atoms_concat(instr_localidx, I).
+instr(I, globalidx(_)) :- atoms_concat(instr_globalidx, I).
 instr(br, labelidx(_)).
 instr(br_if, labelidx(_)).
 instr(call, funcidx(_)).
@@ -172,6 +156,21 @@ instr_ --> ['f64x2.promote_low_f32x4'].
 instr_ --> ['ref.is_null'].
 % Parametric Instructions DCG Rules (No Args)
 instr_ --> ['drop'].
+% Memory Instructions DCG Rules (No Args)
+instr_ --> ['memory.size'].
+instr_ --> ['memory.grow'].
+instr_ --> ['memory.fill'].
+instr_ --> ['memory.copy'].
+% Control Instructions DCG Rules (No Args)
+instr_ --> ['nop'].
+instr_ --> ['unreachable'].
+instr_ --> ['return'].
+% Vector Instructions DCG Rules (laneidx)
+instr_laneidx --> ['i8x16.shuffle'].
+instr_laneidx --> (['i8x16'] | ['i16x8']), ['.extract_lane'], sx.
+instr_laneidx --> (['i32x4'] | ['i64x2']), ['.extract_lane'].
+instr_laneidx --> fshape, ['.extract_lane'].
+instr_laneidx --> shape, ['.replace_lane'].
 % Parametric Instructions DCG Rules (valtype)
 instr_valtype --> ['select'].
 % Variable Instructions DCG Rules (localidx)
@@ -191,7 +190,35 @@ instr_memarg --> ['v128.load32x2_'], sx.
 instr_memarg --> ['v128.load32_zero'].
 instr_memarg --> ['v128.load64_zero'].
 instr_memarg --> ['v128.load'], ww, ['_splat'].
-instr_memarg_laneidx --> ['v128'], (['.store'] | ['.load']), ww, ['_lane'].
+% Memory Instructions DCG Rules (dataidx)
+instr_dataidx --> ['memory.init'].
+instr_dataidx --> ['data.drop'].
+% Reference Instructions DCG Rules (reftype)
+instr_reftype --> ['ref.null'].
+% Reference Instructions DCG Rules (funcidx)
+instr_funcidx --> ['ref.func'].
+% Table Instructions (tableidx)
+instr_tableidx --> ['table.'], (['get'] | ['set'] | ['size'] | ['grow'] | ['fill']).
+% Control Instructions (labelidx)
+instr_labelidx --> ['br'].
+instr_labelidx --> ['br_if'].
+% Control Instructions (funcidx)
+instr_funcidx --> ['call'].
+% Table Instructions (tableidx tableidx)
+instr_tableidx_tableidx --> ['table.copy'].
+% Table Instructions (tableidx elemidx)
+instr_tableidx_elemidx --> ['table.init'].
+% Memory Instructions DCG Rules (memarg laneidx)
+instr_memarg_laneidx --> ['v128.'], (['store'] | ['load']), ww, ['_lane'].
+% Control Instructions (vec(labelidx) labelidx)
+instr_veclabelidx_labelidx --> ['br_table'].
+% Control Instructions (tableidx typeidx)
+instr_tableidx_typeidx --> ['call_indirect'].
+% Control Instructions (blocktype instr*)
+instr_blocktype_instr --> (['block'] | ['loop']).
+% Control Instructions (blocktype instr* instr*)
+instr_blocktype_instr_instr --> ['if'].
+
 iunop --> [clz] | [ctz] | [popcnt].
 ibinop --> [add] | [sub] | [mul] | (([div_] | [rem_] | [shr_]), sx)
     | [and] | [or] | [xor] | [shl] | [rotl] | [rotr].
@@ -239,6 +266,8 @@ visatbinop --> ([add_sat_] | [sub_sat_]), sx.
 vishiftop --> [shl] | ([shr_], sx).
 vfunop --> [abs] | [neg] | [sqrt] | [ceil] | [floor] | [trunc] | [nearest].
 vfbinop --> [add] | [sub] | [mul] | [div] | [min] | [max] | [pmin] | [pmax].
+
+blocktype --> typeidx | valtype.
 
 expr(Instrs) :- maplist(instr, Instrs).
 
