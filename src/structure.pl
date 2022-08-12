@@ -68,15 +68,17 @@ externtype(global(globaltype(_))).
 
 % TODO: 2.3.8.1 Conventions
 % Filter out specific externtypes in list
-
 atoms_concat(DCG, I) :- phrase(DCG, L), reverse(L, LR), foldl(atom_concat, LR, '', I).
 
+:- table instr_/1.
+instr_(I) :- phrase(instr_, I).
+:- table instr_memarg/1.
+instr_memarg(I) :- phrase(instr_memarg, I)
 % Instructions
 
 nn --> ['32'] | ['64'].
 mm --> ['32'] | ['64'].
 sx --> [u] | [s].
-instr(I) :- atoms_concat(instr_, I).
 % Vector Instructions /1
 % Numeric Instructions /2
 instr --> ['i32.const'], N, { i(32, N) }.
@@ -86,32 +88,6 @@ instr --> ['f64.const'], N, { f(64, N) }.
 instr --> ['v128.const'], N, { i(128, N) }.
 % Vector Instructions /2
 instr('v128.const', i(128, _)).
-% Parametric Instructions /2
-instr(I, 0) :- atoms_concat(instr_valtype, I).
-instr(I, valtype(_)) :- atoms_concat(instr_valtype, I).
-% Variable Instructions /2
-instr(I, localidx(_)) :- atoms_concat(instr_localidx, I).
-instr(I, globalidx(_)) :- atoms_concat(instr_globalidx, I).
-% i8x16_extract_lane_sx laneidx
-instr(I, laneidx(_)) :- sx(SX), atom_concat('i8x16_extract_lane_', SX, I).
-% i16x8_extract_lane_sx laneidx
-instr(I, laneidx(_)) :- sx(SX), atom_concat('i16x8_extract_lane_', SX, I).
-% Memory Instructions /2
-instr(I, memarg(_)) :- phrase(instr_memarg, L), reverse(L, LR), foldl(atom_concat, LR, '', I).
-instr(I, dataidx(_)) :- atoms_concat(instr_dataidx, I).
-instr(I, localidx(_)) :- atoms_concat(instr_localidx, I).
-instr(I, globalidx(_)) :- atoms_concat(instr_globalidx, I).
-instr(br, labelidx(_)).
-instr(br_if, labelidx(_)).
-instr(call, funcidx(_)).
-instr(call_indirect, funcidx(_)).
-instr(v128_const, i(128, _)).
-% Vector Instructions /3
-instr(instr_memarg_lane, memarg(_), laneidx(_)).
-instr(block, resulttype(_), Instrs) :- maplist(instr, Instrs).
-instr(loop, resulttype(_), Instrs) :- maplist(instr, Instrs).
-instr(br_table, vec(labelidx(_)), labelidx(_)).
-instr(if, resulttype(_), Instrs, ElseInstrs) :- maplist(instr, Instrs), maplist(instr, ElseInstrs).
 % Numeric DCG Rules (No Arg Instructions)
 instr_ --> [i], nn, ['.'], (iunop | ibinop | itestop | irelop).
 instr_ --> [f], nn, ['.'], (funop | fbinop | frelop).
@@ -321,3 +297,21 @@ importdesc(func, typeidx(_)).
 importdesc(table, tabletype(_)).
 importdesc(mem, memtype(_)).
 importdesc(global, globaltype(_)).
+
+C(
+    types(Types), 
+    funcs(Funcs), 
+    tables(Tables),
+    mems(Mems),
+    globals(Globals),
+    locals(Locals),
+    labels(Labels),
+    return(resulttype(_))
+) :-
+    maplist(functype, Types),
+    maplist(functype, Funcs),
+    maplist(tabletype, Tables),
+    maplist(memtype, Mems),
+    maplist(globaltype, Globals),
+    maplist(valtype, Locals),
+    maplist(labels, Labels).
