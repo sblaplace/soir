@@ -81,11 +81,11 @@ mm --> ['32'] | ['64'].
 sx --> [u] | [s].
 % Vector Instructions /1
 % Numeric Instructions /2
-instr --> ['i32.const'], N, { i(32, N) }.
-instr --> ['i64.const'], N, { i(64, N) }.
-instr --> ['f32.const'], N, { f(32, N) }.
-instr --> ['f64.const'], N, { f(64, N) }.
-instr --> ['v128.const'], N, { i(128, N) }.
+instr --> ['i32.const'], [N], { i(32, N) }.
+instr --> ['i64.const'], [N], { i(64, N) }.
+instr --> ['f32.const'], [N], { f(32, N) }.
+instr --> ['f64.const'], [N], { f(64, N) }.
+instr --> ['v128.const'], [N], { i(128, N) }.
 % Vector Instructions /2
 instr('v128.const', i(128, _)).
 % Numeric DCG Rules (No Arg Instructions)
